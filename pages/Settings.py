@@ -5,8 +5,12 @@ import streamlit as st
 sys.path.append("..")
 from engine import DEFAULT_SPYMASTER_INSTRUCT, DEFAULT_SPYMASTER_PROMPT
 from persistent_state import SETTINGS_PAGE_NAME as __PAGE_NAME__
-from persistent_state import (SPYMASTER_INSTRUCT_KEY, SPYMASTER_PROMPT_KEY,
-                              persist_key, persist_session_state)
+from persistent_state import (
+    SPYMASTER_INSTRUCT_KEY,
+    SPYMASTER_PROMPT_KEY,
+    persist_key,
+    persist_session_state,
+)
 
 # Configure OpenAI Assistant for the spymaster role
 st.subheader("Spymaster")

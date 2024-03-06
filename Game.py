@@ -4,8 +4,12 @@ import numpy as np
 import streamlit as st
 
 from engine import generate_board, get_openai_client, init_spymaster
-from persistent_state import (SPYMASTER_INSTRUCT_KEY, SPYMASTER_PROMPT_KEY,
-                              persist_key, persist_session_state)
+from persistent_state import (
+    SPYMASTER_INSTRUCT_KEY,
+    SPYMASTER_PROMPT_KEY,
+    persist_key,
+    persist_session_state,
+)
 from styling import TEAM_TO_STYLE, set_game_style
 
 __PAGE_NAME__ = "Game"
@@ -113,26 +117,27 @@ else:
 
     # generate prompt
     hint, game_end = spymaster.play()
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.markdown(
-            hint
-            if spymaster.current_team == 0
-            else f":{TEAM_TO_STYLE[1]}[Team {TEAM_TO_STYLE[1]}]"
-        )
-        with st.expander("Show History"):
-            st.markdown(spymaster.get_history(0))
 
-    with col3:
-        st.markdown(
-            hint
-            if spymaster.current_team == 1
-            else f":{TEAM_TO_STYLE[2]}[Team {TEAM_TO_STYLE[2]}]"
-        )
-        with st.expander("Show History"):
-            st.markdown(spymaster.get_history(1))
+    columns = st.columns((0.3, 0.1, 0.2, 0.1, 0.3))
+    # Show history of each team
+    for col_idx, team in [(0, 0), (-1, 1)]:
+        with columns[col_idx]:
+            st.markdown(hint if spymaster.current_team == team else """|""")
+            with st.expander("Show History"):
+                st.markdown(spymaster.get_history(team))
 
-    with col2:
+    for col_idx, team in [(1, 0), (-2, 1)]:
+        with columns[col_idx]:
+            st.markdown(
+                f'<span class="{TEAM_TO_STYLE[team + 1]}"></span>',
+                unsafe_allow_html=True,
+            )
+            st.button(
+                f"{len(spymaster.words(team))}", disabled=True, key=f"counter_{team}"
+            )
+
+    # Interaction
+    with columns[2]:
         if game_end:
             if st.button("Restart"):
                 keys = list(st.session_state.keys())
@@ -152,6 +157,10 @@ else:
                 st.rerun()
 
         else:
+            st.markdown(
+                f'<span class="beige"></span>',
+                unsafe_allow_html=True,
+            )
             st.button(
                 "Pass your turn",
                 on_click=lambda spymaster=spymaster: spymaster.end_turn(),

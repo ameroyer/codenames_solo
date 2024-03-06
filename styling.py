@@ -8,12 +8,18 @@ def set_game_style():
         """
         <style>
             .element-container:has(.card) + div button {
-                height: 60px;
+                height: 55px;
                 width: 130px;
-                margin: 3px
+                margin: 1px
             }
 
             .element-container:has(.blue) + div button {
+                &,
+                &:hover {
+                    background-color: DodgerBlue
+                }
+            }
+            .element-container:has(.blue) + div button:disabled {
                 &,
                 &:hover {
                     background-color: DodgerBlue

@@ -12,7 +12,7 @@ The forbidden word  REALLY NOT to guess is: {KLL}.
 Give me your best hint."""
 
 
-DEFAULT_SPYMASTER_INSTRUCT = """You are playing the game Codenames as a great spymaster giving hints.
+DEFAULT_SPYMASTER_INSTRUCT = """You are playing the game Codenames as a bold and creative spymaster giving hints.
 Your answers should be in the format WORD - NUMBER."""
 
 
@@ -66,6 +66,9 @@ class Spymaster:
         self.use_last_prompt_only = use_last_prompt_only
         self.current_team = 1
 
+    def words(self, team: int):
+        return self.slf if team == 1 else self.opp
+
     def get_history(self, team: int):
         return "\n\n".join(
             x["content"] for x in self.chat_history[team] if x["role"] == "assistant"
@@ -82,8 +85,8 @@ class Spymaster:
     @property
     def prompt(self):
         return self._prompt.format(
-            SLF=", ".join(self.slf if self.current_team == 1 else self.opp),
-            OPP=", ".join(self.opp if self.current_team == 1 else self.slf),
+            SLF=", ".join(self.words(self.current_team)),
+            OPP=", ".join(self.words(1 - self.current_team)),
             NTR=", ".join(self.ntr),
             KLL=", ".join(self.kll),
         )
@@ -98,21 +101,18 @@ class Spymaster:
         # Guessed a neutral or opponent : end turn
         elif team == 0 or team != (self.current_team + 1):
             self.current_hint_word = None
-            (
-                self.ntr
-                if team == 0
-                else self.opp
-                if self.current_team == 1
-                else self.slf
-            ).remove(word)
+            (self.ntr if team == 0 else self.words(1 - self.current_team)).remove(word)
+
             self.current_team = 1 - self.current_team
         # Guessed a correct work: we only continue if we have left over guesses
         else:
             self.current_hint_num -= 1
+
             if self.current_hint_num < 0:
                 self.current_hint_word = None
                 self.current_team = 1 - self.current_team
-            (self.slf if self.current_team == 1 else self.opp).remove(word)
+
+            self.words(self.current_team).remove(word)
 
     def end_turn(self):
         self.current_hint_word = None
