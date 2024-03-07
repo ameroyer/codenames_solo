@@ -1,6 +1,7 @@
+import os
+import random
 from typing import Tuple
 
-import numpy as np
 import streamlit as st
 from openai import OpenAI
 
@@ -12,8 +13,20 @@ The forbidden word  REALLY NOT to guess is: {KLL}.
 Give me your best hint."""
 
 
-DEFAULT_SPYMASTER_INSTRUCT = """You are playing the game Codenames as a bold and creative spymaster giving hints.
+DEFAULT_SPYMASTER_INSTRUCT = """You are playing the game Codenames as a creative spymaster giving hints.
 Your answers should be in the format WORD - NUMBER."""
+
+
+@st.cache_data
+def get_lang_options():
+    return [x[:-4] for x in os.listdir("words_lists") if x.endswith(".txt")]
+
+
+@st.cache_data
+def get_default_words_list(lang: str = "en"):
+    with open(os.path.join("words_lists", f"{lang}.txt"), "r") as open_file:
+        words_list = open_file.read().upper()
+    return words_list
 
 
 @st.cache_resource
@@ -24,15 +37,14 @@ def get_openai_client(api_key: str):
 
 
 @st.cache_data
-def generate_board(side_length: int = 5):
-    with open("words.txt", "r") as open_file:
-        words_list = open_file.read().splitlines()
-
-    side_length = 5
-    words = np.random.choice(words_list, side_length**2, replace=False)
-    team_assignment = [-1] * 1 + [0] * 7 + [1] * 8 + [2] * 9
-    team_assignment = np.random.permutation(team_assignment)
-    return words, team_assignment
+def generate_board(words_list, side_length: int = 5, random_seed: int = 42):
+    words_list = [x.strip() for x in words_list.splitlines() if len(x.strip())]
+    random.seed(random_seed)
+    random.shuffle(words_list)
+    # TODO: Adapt number of cards to larger board
+    team_assignment = [-1] * 1 + [0] * 7 + [1] * 8 + [2] * (side_length**2 - 16)
+    random.shuffle(team_assignment)
+    return words_list[: side_length**2], team_assignment
 
 
 def generate_spymaster_prompt(words, team_assignment):
@@ -54,12 +66,11 @@ class Spymaster:
         self.client = client
         self.model_name = model_name
         self._prompt = DEFAULT_SPYMASTER_PROMPT
-        self.instruct = DEFAULT_SPYMASTER_INSTRUCT
         self.current_hint_word = None
         self.current_hint_num = 0
         self.chat_history = [
             [
-                {"role": "system", "content": self.instruct},
+                {"role": "system", "content": DEFAULT_SPYMASTER_INSTRUCT},
             ]
             for _ in range(2)
         ]
@@ -71,7 +82,9 @@ class Spymaster:
 
     def get_history(self, team: int):
         return "\n\n".join(
-            x["content"] for x in self.chat_history[team] if x["role"] == "assistant"
+            f"**{x['content']}**" if x["role"] == "assistant" else f"  * {x['content']}"
+            for x in self.chat_history[team]
+            if x["role"] in ["assistant", "user"]
         )
 
     def update_words(self, words, team_assignment):
@@ -81,6 +94,13 @@ class Spymaster:
 
     def update_prompt(self, prompt: str):
         self._prompt = prompt
+
+    def update_instruct(self, instruct: str):
+        for lst in self.chat_history:
+            lst[0]["content"] = instruct
+
+    def use_whole_history(self, enabled: bool):
+        self.use_last_prompt_only = not enabled
 
     @property
     def prompt(self):
@@ -93,7 +113,7 @@ class Spymaster:
 
     def remove(self, word, team):
         self.chat_history[self.current_team].append(
-            {"role": "user", "content": f"Your teammates guessed the word {word}"},
+            {"role": "user", "content": f"I picked {word}"},
         )
         # Guessed the killer card :(
         if team == -1:
@@ -118,10 +138,14 @@ class Spymaster:
         self.current_hint_word = None
         self.current_team = 1 - self.current_team
 
-    def give_hint(self, num_trials=2):
+    def give_hint(self, num_trials=2, debug: bool = True):
         self.chat_history[self.current_team].append(
             {"role": "user", "content": self.prompt}
         )
+
+        if debug:
+            print(self.chat_history[self.current_team])
+
         self.current_hint_num = -1
         while self.current_hint_num < 1 and num_trials >= 0:
             try:
@@ -155,7 +179,7 @@ class Spymaster:
         if num_trials == 0:
             raise ValueError
 
-    def play(self) -> Tuple[str, bool]:
+    def play(self) -> Tuple[str, int]:
         fmt = (
             ":blue[{word} - {num}]"
             if self.current_team == 1
@@ -164,8 +188,14 @@ class Spymaster:
         # Check if we lost by guessing the killer card in the previous action
         if len(self.kll) == 0:
             return (
-                fmt.format(word="Your guessed the killer card.", num="You lost ☠️"),
-                True,
+                fmt.format(word="You found the killer.", num="You lost ☠️"),
+                -1,
+            )
+        # Check if we lost by guessing the opponent's last word
+        if len(self.words(1 - self.current_team)) == 0:
+            return (
+                fmt.format(word="You guessed for the other team.", num="You lost ☠️"),
+                -1,
             )
 
         # Give a hint
@@ -175,8 +205,8 @@ class Spymaster:
         if (self.current_team == 1 and len(self.slf) == 0) or (
             self.current_team == 2 and len(self.opp) == 0
         ):
-            return fmt.format(word="You found all your cards.", num="You win 🪩 !"), True
-        return fmt.format(word=self.current_hint_word, num=self.current_hint_num), False
+            return fmt.format(word="You guessed all your cards.", num="You win 🪩 !"), 1
+        return fmt.format(word=self.current_hint_word, num=self.current_hint_num), 0
 
 
 @st.cache_resource

@@ -1,10 +1,18 @@
+import random
 from functools import partial
 
-import numpy as np
 import streamlit as st
 
-from engine import generate_board, get_openai_client, init_spymaster
+from engine import (
+    generate_board,
+    get_default_words_list,
+    get_openai_client,
+    init_spymaster,
+)
 from persistent_state import (
+    BOARD_LANG_KEY,
+    BOARD_WORDS_KEY,
+    SPYMASTER_BEHAVIOR_KEY,
     SPYMASTER_INSTRUCT_KEY,
     SPYMASTER_PROMPT_KEY,
     persist_key,
@@ -14,6 +22,11 @@ from styling import TEAM_TO_STYLE, set_game_style
 
 __PAGE_NAME__ = "Game"
 st.set_page_config(layout="wide")
+
+# Random seed
+# will only be updated when rerunning the game
+if f"{__PAGE_NAME__}_random_seed" not in st.session_state:
+    st.session_state[f"{__PAGE_NAME__}_random_seed"] = random.randint(0, 1000)
 
 # API parameters
 openai_api_key = persist_key(f"{__PAGE_NAME__}_api_key")
@@ -31,7 +44,7 @@ if not (st.session_state[api_choice] and st.session_state[model_choice]):
     # OpenAI API key
     st.subheader("OpenAI API")
     openai_api = st.text_input(
-        label="Enter OpenAI API key",
+        label="Enter a valid OpenAI API key",
         value="",
         key=openai_api_key,
         disabled=st.session_state[api_choice],
@@ -52,7 +65,7 @@ if not (st.session_state[api_choice] and st.session_state[model_choice]):
         except ValueError:
             index = 0
         st.selectbox(
-            label="Model",
+            label="Select an OpenAI model",
             options=available_models,
             index=index,
             key=openai_model_key,
@@ -69,7 +82,16 @@ else:
 
     # Init game state and spymaster
     side_length = 5
-    words, team_assignment = generate_board(side_length=side_length)
+    if BOARD_WORDS_KEY not in st.session_state:
+        st.session_state[BOARD_WORDS_KEY] = get_default_words_list(
+            st.session_state.get(BOARD_LANG_KEY, "en")
+        )
+
+    words, team_assignment = generate_board(
+        words_list=st.session_state[BOARD_WORDS_KEY],
+        side_length=side_length,
+        random_seed=st.session_state[f"{__PAGE_NAME__}_random_seed"],
+    )
     openai_client, available_models = get_openai_client(
         st.session_state[openai_api_key]
     )
@@ -80,7 +102,10 @@ else:
         spymaster.update_prompt(st.session_state[SPYMASTER_PROMPT_KEY])
 
     if SPYMASTER_INSTRUCT_KEY in st.session_state:
-        spymaster.update_prompt(st.session_state[SPYMASTER_INSTRUCT_KEY])
+        spymaster.update_instruct(st.session_state[SPYMASTER_INSTRUCT_KEY])
+
+    if SPYMASTER_BEHAVIOR_KEY in st.session_state:
+        spymaster.use_whole_history(st.session_state[SPYMASTER_BEHAVIOR_KEY])
 
     # Generate board
     columns = st.columns(side_length)
@@ -118,8 +143,12 @@ else:
     # generate prompt
     hint, game_end = spymaster.play()
 
-    columns = st.columns((0.3, 0.1, 0.2, 0.1, 0.3))
+    # Celebrate upon win !
+    if game_end == 1:
+        st.balloons()
+
     # Show history of each team
+    columns = st.columns((0.3, 0.1, 0.2, 0.1, 0.3))
     for col_idx, team in [(0, 0), (-1, 1)]:
         with columns[col_idx]:
             st.markdown(hint if spymaster.current_team == team else """|""")
@@ -138,7 +167,7 @@ else:
 
     # Interaction
     with columns[2]:
-        if game_end:
+        if game_end != 0:
             if st.button("Restart"):
                 keys = list(st.session_state.keys())
                 for key in keys:
@@ -153,6 +182,9 @@ else:
                         st.session_state[key] = st.session_state[key]
                 st.cache_resource.clear()
                 st.cache_data.clear()
+                st.session_state[f"{__PAGE_NAME__}_random_seed"] = random.randint(
+                    0, 1000
+                )
                 persist_session_state(__PAGE_NAME__)
                 st.rerun()
 

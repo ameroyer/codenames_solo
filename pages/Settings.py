@@ -3,19 +3,33 @@ import sys
 import streamlit as st
 
 sys.path.append("..")
-from engine import DEFAULT_SPYMASTER_INSTRUCT, DEFAULT_SPYMASTER_PROMPT
+from engine import (
+    DEFAULT_SPYMASTER_INSTRUCT,
+    DEFAULT_SPYMASTER_PROMPT,
+    get_default_words_list,
+    get_lang_options,
+)
+from persistent_state import BOARD_LANG_KEY, BOARD_WORDS_KEY
 from persistent_state import SETTINGS_PAGE_NAME as __PAGE_NAME__
 from persistent_state import (
+    SPYMASTER_BEHAVIOR_KEY,
     SPYMASTER_INSTRUCT_KEY,
     SPYMASTER_PROMPT_KEY,
-    persist_key,
     persist_session_state,
 )
 
 # Configure OpenAI Assistant for the spymaster role
-st.subheader("Spymaster")
-spymaster_assistant_instruct = st.text_area(
-    label="Assistant Instruction",
+st.subheader("Spymaster parameters")
+st.markdown(
+    "*Note that the parameters will start taking effect at the next hing given*"
+)
+
+st.checkbox(
+    label="Use whole history when prompting", value=True, key=SPYMASTER_BEHAVIOR_KEY
+)
+
+st.text_area(
+    label="System Instruction",
     value=st.session_state.get(SPYMASTER_INSTRUCT_KEY, DEFAULT_SPYMASTER_INSTRUCT),
     key=SPYMASTER_INSTRUCT_KEY,
 )
@@ -38,3 +52,30 @@ st.text(
 
 # Persist session state across pages
 persist_session_state(__PAGE_NAME__)
+
+
+st.subheader("Word List")
+options = get_lang_options()
+try:
+    default_index = options.index("en")
+except ValueError:
+    default_index = 0
+
+
+def __update_lang__():
+    del st.session_state[BOARD_WORDS_KEY]
+
+
+lang = st.selectbox(
+    label="Select Language",
+    options=options,
+    index=st.session_state.get(options.get(BOARD_LANG_KEY), default_index),
+    key=BOARD_LANG_KEY,
+    on_change=__update_lang__,
+)
+
+st.text_area(
+    label="Edit words list",
+    value=st.session_state.get(BOARD_WORDS_KEY, get_default_words_list(lang)),
+    key=BOARD_WORDS_KEY,
+)
