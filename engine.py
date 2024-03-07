@@ -274,7 +274,7 @@ class Spymaster:
             self.give_hint()
         return (
             fmt.format(f"{self.current_hint_word} - {self.og_hint_num}")
-            + "\n\n"
+            + "   \n"
             + fmt.format(f"({self.current_hint_num+ 1} guesses left)"),
             0,
         )

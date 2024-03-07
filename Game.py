@@ -3,13 +3,25 @@ from functools import partial
 
 import streamlit as st
 
-from engine import (DEFAULT_SPYMASTER_INSTRUCT, FULL_LANGUAGES, generate_board,
-                    get_default_words_list, get_lang_options,
-                    get_openai_client, init_spymaster)
-from persistent_state import (BOARD_LANG_KEY, BOARD_WORDS_KEY,
-                              SETTINGS_PAGE_NAME, SPYMASTER_BEHAVIOR_KEY,
-                              SPYMASTER_INSTRUCT_KEY, SPYMASTER_PROMPT_KEY,
-                              persist_key, persist_session_state)
+from engine import (
+    DEFAULT_SPYMASTER_INSTRUCT,
+    FULL_LANGUAGES,
+    generate_board,
+    get_default_words_list,
+    get_lang_options,
+    get_openai_client,
+    init_spymaster,
+)
+from persistent_state import (
+    BOARD_LANG_KEY,
+    BOARD_WORDS_KEY,
+    SETTINGS_PAGE_NAME,
+    SPYMASTER_BEHAVIOR_KEY,
+    SPYMASTER_INSTRUCT_KEY,
+    SPYMASTER_PROMPT_KEY,
+    persist_key,
+    persist_session_state,
+)
 from styling import TEAM_TO_STYLE, set_game_style
 
 __PAGE_NAME__ = "Game"
@@ -180,7 +192,7 @@ else:
     for col_idx, team in [(0, 0), (-1, 1)]:
         with columns[col_idx]:
             st.markdown(
-                hint if spymaster.current_team == team else """&zwnj;\n\n&zwnj;"""
+                hint if spymaster.current_team == team else """&zwnj;    \n&zwnj;"""
             )
             with st.expander("Show History"):
                 st.markdown(spymaster.get_history(team))
