@@ -3,10 +3,18 @@ import streamlit as st
 TEAM_TO_STYLE = {-1: "black", 0: "beige", 1: "red", 2: "blue"}
 
 
-def set_game_style():
+def set_game_style() -> None:
     st.markdown(
         """
         <style>
+
+            .block-container
+            {
+                padding-top: 1rem;
+                padding-bottom: 0rem;
+                margin-top: 1rem;
+            }
+
             .element-container:has(.card) + div button {
                 height: 55px;
                 width: 130px;
@@ -61,7 +69,7 @@ def set_game_style():
                 background-color: white
             }
 
-            div[data-testid="column"] p {
+            div[data-testid="column"] {
                 text-align: center;
             }
 

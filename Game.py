@@ -3,32 +3,26 @@ from functools import partial
 
 import streamlit as st
 
-from engine import (
-    generate_board,
-    get_default_words_list,
-    get_openai_client,
-    init_spymaster,
-)
-from persistent_state import (
-    BOARD_LANG_KEY,
-    BOARD_WORDS_KEY,
-    SPYMASTER_BEHAVIOR_KEY,
-    SPYMASTER_INSTRUCT_KEY,
-    SPYMASTER_PROMPT_KEY,
-    persist_key,
-    persist_session_state,
-)
+from engine import (DEFAULT_SPYMASTER_INSTRUCT, FULL_LANGUAGES, generate_board,
+                    get_default_words_list, get_lang_options,
+                    get_openai_client, init_spymaster)
+from persistent_state import (BOARD_LANG_KEY, BOARD_WORDS_KEY,
+                              SETTINGS_PAGE_NAME, SPYMASTER_BEHAVIOR_KEY,
+                              SPYMASTER_INSTRUCT_KEY, SPYMASTER_PROMPT_KEY,
+                              persist_key, persist_session_state)
 from styling import TEAM_TO_STYLE, set_game_style
 
 __PAGE_NAME__ = "Game"
 st.set_page_config(layout="wide")
+
 
 # Random seed
 # will only be updated when rerunning the game
 if f"{__PAGE_NAME__}_random_seed" not in st.session_state:
     st.session_state[f"{__PAGE_NAME__}_random_seed"] = random.randint(0, 1000)
 
-# API parameters
+
+# Initial setup - API parameters
 openai_api_key = persist_key(f"{__PAGE_NAME__}_api_key")
 openai_model_key = persist_key(f"{__PAGE_NAME__}_model_name")
 
@@ -50,7 +44,7 @@ if not (st.session_state[api_choice] and st.session_state[model_choice]):
         disabled=st.session_state[api_choice],
     )
 
-    def _on_click_():
+    def _on_click_() -> None:
         st.session_state[api_choice] = True
 
     st.button("Next", on_click=_on_click_)
@@ -64,19 +58,53 @@ if not (st.session_state[api_choice] and st.session_state[model_choice]):
                 index = available_models.index("gpt-3.5-turbo-0125")
         except ValueError:
             index = 0
-        st.selectbox(
-            label="Select an OpenAI model",
-            options=available_models,
-            index=index,
-            key=openai_model_key,
-        )
 
-        def _on_click_():
-            st.session_state[model_choice] = True
+        col1, col2 = st.columns(2)
+        # Model choice
+        with col1:
+            st.selectbox(
+                label="Select an OpenAI model",
+                options=available_models,
+                index=index,
+                key=openai_model_key,
+            )
+
+            def _on_click_() -> None:
+                st.session_state[model_choice] = True
+
+        # Language choice
+        with col2:
+            INIT_LANG_KEY = persist_key(f"{__PAGE_NAME__}_init_lang")
+            options = get_lang_options()
+            try:
+                default_index = options.index("en")
+            except ValueError:
+                default_index = 0
+
+            def __update_lang__() -> None:
+                global DEFAULT_SPYMASTER_INSTRUCT
+                if BOARD_WORDS_KEY in st.session_state:
+                    del st.session_state[BOARD_WORDS_KEY]
+                st.session_state[BOARD_LANG_KEY] = st.session_state[INIT_LANG_KEY]
+                lang = FULL_LANGUAGES[st.session_state[BOARD_LANG_KEY]]
+                st.session_state[SPYMASTER_INSTRUCT_KEY] = (
+                    f"{DEFAULT_SPYMASTER_INSTRUCT}. You are playing the game in {lang}"
+                    f" and your answers should be in {lang}"
+                )
+
+            lang = st.selectbox(
+                label="Select Language",
+                options=options,
+                index=options.index(st.session_state[INIT_LANG_KEY])
+                if INIT_LANG_KEY in st.session_state
+                else default_index,
+                key=f"{__PAGE_NAME__}_init_lang",
+                on_change=__update_lang__,
+            )
 
         st.button("Start", on_click=_on_click_)
 
-
+# Play the game
 else:
     set_game_style()
 
@@ -151,7 +179,9 @@ else:
     columns = st.columns((0.3, 0.1, 0.2, 0.1, 0.3))
     for col_idx, team in [(0, 0), (-1, 1)]:
         with columns[col_idx]:
-            st.markdown(hint if spymaster.current_team == team else """|""")
+            st.markdown(
+                hint if spymaster.current_team == team else """&zwnj;\n\n&zwnj;"""
+            )
             with st.expander("Show History"):
                 st.markdown(spymaster.get_history(team))
 
@@ -167,37 +197,39 @@ else:
 
     # Interaction
     with columns[2]:
-        if game_end != 0:
-            if st.button("Restart"):
-                keys = list(st.session_state.keys())
-                for key in keys:
-                    if not key in [
+        # Skip your turn
+        st.markdown(
+            f'<span class="beige"></span>',
+            unsafe_allow_html=True,
+        )
+        st.button(
+            "Pass your turn",
+            on_click=lambda spymaster=spymaster: spymaster.end_turn(),
+            disabled=game_end,
+        )
+
+        # Restart game at any moment
+        if st.button("Restart"):
+            keys = list(st.session_state.keys())
+            for key in keys:
+                if not (
+                    key
+                    in [
                         api_choice,
                         model_choice,
                         openai_model_key,
                         openai_api_key,
-                    ]:
-                        st.session_state.pop(key)
-                    else:
-                        st.session_state[key] = st.session_state[key]
-                st.cache_resource.clear()
-                st.cache_data.clear()
-                st.session_state[f"{__PAGE_NAME__}_random_seed"] = random.randint(
-                    0, 1000
-                )
-                persist_session_state(__PAGE_NAME__)
-                st.rerun()
-
-        else:
-            st.markdown(
-                f'<span class="beige"></span>',
-                unsafe_allow_html=True,
-            )
-            st.button(
-                "Pass your turn",
-                on_click=lambda spymaster=spymaster: spymaster.end_turn(),
-                disabled=game_end,
-            )
+                    ]
+                    or key.startswith(SETTINGS_PAGE_NAME)
+                ):
+                    st.session_state.pop(key)
+                else:
+                    st.session_state[key] = st.session_state[key]
+            st.cache_resource.clear()
+            st.cache_data.clear()
+            st.session_state[f"{__PAGE_NAME__}_random_seed"] = random.randint(0, 1000)
+            persist_session_state(__PAGE_NAME__)
+            st.rerun()
 
 # Alwyays carry session state across pages
 # We need to carry the value of the widgets that were not visible

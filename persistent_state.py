@@ -7,10 +7,12 @@ __PERSISTENT_KEYS__ = set()
 
 def persist_key(key: str) -> str:
     """Mark widget key as persistent"""
+    global __PERSISTENT_KEYS__
     __PERSISTENT_KEYS__.add(key)
     return key
 
 
+"""Define Settings keys that will be used by both the Settings and Game page"""
 SETTINGS_PAGE_NAME = "Settings"
 SPYMASTER_PROMPT_KEY = persist_key(f"{SETTINGS_PAGE_NAME}_spymaster_prompt")
 SPYMASTER_INSTRUCT_KEY = persist_key(f"{SETTINGS_PAGE_NAME}_spymaster_instruct")
@@ -20,7 +22,7 @@ BOARD_LANG_KEY = persist_key(f"{SETTINGS_PAGE_NAME}_word_lang")
 
 
 def persist_session_state(page_name: Optional[str] = None) -> None:
-    """Force storage of all persistent keys in session state"""
+    """Force storage of all persistent keys from other papges in session state"""
     for k, v in st.session_state.items():
         if (
             k in __PERSISTENT_KEYS__
