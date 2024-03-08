@@ -258,6 +258,7 @@ class Spymaster:
                             },
                         )
                     )
+                    break
             except ValueError:
                 pass
             num_retries -= 1
