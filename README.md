@@ -22,9 +22,10 @@ The app will first lead you through some basic configuration (*API key, model ch
 <div style="width: 80%; margin:auto"><img src='preview.png' width='100%'></div>
 
 ### Settings
-Do you find the model to be a bad spymaster ? Do you love prompt engineering ? Well yYou can improve/customize how the API is queried from the options on Settings page. Specifically, you can edit:
+Do you find the model to be a bad spymaster (*it does tend to be a bit repetitive*) ? Do you love prompt engineering ? Well you can improve/customize how the API is queried from the options on Settings page. Specifically, you can edit:
   * The base **system instruction**; useful to customize the high-level spymaster behavior, e.g. its language.
-  * The **prompt used to query for a hint**. The prompt should inclde the special keywords `{SLF}`, `{OPP}`, `{NTR}` and `{KLL}`, acting as placeholder for the spymaster's cards, opponent team's cards, bystander cards, and assasin card respectively,
+  * The **prompt used to query for a hint**. The prompt should inclde the special keywords `{SLF}`, `{OPP}`, `{NTR}` and `{KLL}`, acting as placeholder for the spymaster's cards, opponent team's cards, bystander cards, and assasin card respectively
+  * The **sampling temperature** for generating hints
   * The **words list** from which the cards on the board are drawn. You can load the default language list for several languages
 
 ### Some extension Ideas

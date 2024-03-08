@@ -27,6 +27,7 @@ from styling import TEAM_TO_STYLE, set_game_style
 
 __PAGE_NAME__ = "Game"
 st.set_page_config(layout="wide")
+set_game_style()
 
 
 # Random seed
@@ -48,6 +49,26 @@ if model_choice not in st.session_state:
     st.session_state[model_choice] = False
 
 if not (st.session_state[api_choice] and st.session_state[model_choice]):
+    # Some info
+    st.header("Codenames Solo")
+    col1, _, col2, _ = st.columns((0.17, 0.05, 0.73, 0.05))
+    with col1:
+        st.image("logo.jpeg")
+        st.link_button("See on Github", "https://github.com/ameroyer/codenames_solo")
+
+    with col2:
+        st.markdown(
+            "<div style='text-align: center; font-style: italic'>"
+            "Play Codenames with a chatbot as the spymaster."
+            "<br>For times when you want to play a quick "
+            "Codenames game but have no one to play with."
+            "<p>The app will first lead you through some basic configuration (API key, "
+            "model choice and language for the game's words). After this, the game will"
+            " start: You play as the spy(ies), while the API queries emulate both spymasters."
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
     # OpenAI API key
     st.subheader("OpenAI API")
     openai_api = st.text_input(
@@ -119,8 +140,6 @@ if not (st.session_state[api_choice] and st.session_state[model_choice]):
 
 # Play the game
 else:
-    set_game_style()
-
     # Init game state and spymaster
     side_length = 5
     if BOARD_WORDS_KEY not in st.session_state:
