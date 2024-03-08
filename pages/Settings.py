@@ -6,6 +6,7 @@ sys.path.append("..")
 from engine import (
     DEFAULT_SPYMASTER_INSTRUCT,
     DEFAULT_SPYMASTER_PROMPT,
+    DEFAULT_SPYMASTER_TEMPERATURE,
     get_default_words_list,
     get_lang_options,
 )
@@ -15,6 +16,7 @@ from persistent_state import (
     SPYMASTER_BEHAVIOR_KEY,
     SPYMASTER_INSTRUCT_KEY,
     SPYMASTER_PROMPT_KEY,
+    SPYMASTER_TEMP_KEY,
     persist_session_state,
 )
 
@@ -24,9 +26,22 @@ st.markdown(
     "*Note that these parameters will start taking effect at the next hint given*"
 )
 
-st.checkbox(
-    label="Use the whole history when prompting", value=True, key=SPYMASTER_BEHAVIOR_KEY
-)
+col1, col2 = st.columns(2)
+with col1:
+    st.checkbox(
+        label="Use the whole history when prompting",
+        value=True,
+        key=SPYMASTER_BEHAVIOR_KEY,
+    )
+
+with col2:
+    st.slider(
+        "Temperature",
+        min_value=0.0,
+        max_value=2.0,
+        value=st.session_state.get(SPYMASTER_TEMP_KEY, DEFAULT_SPYMASTER_TEMPERATURE),
+        key=SPYMASTER_TEMP_KEY,
+    )
 
 st.text_area(
     label="System Instruction",

@@ -3,6 +3,7 @@
 |  |  |
 | ---- | ----------- |
 | <img src='logo.jpeg' width='200px'> | *A quick exercise on building streamlit apps and prompting the OpenAI API. For those times when you just want to play a quick Codenames game but have no one to play with :(* |
+|   | Deployed via streamlit at [codenames-solo.streamlit.app/](https://codenames-solo.streamlit.app/) |
 
 
 
@@ -29,7 +30,6 @@ Do you find the model to be a bad spymaster ? Do you love prompt engineering ? W
 ### Some extension Ideas
   * Reverse role (play as the spymaster)
   * Engineer prompts for finer control on the spymaster's play style
-  * Test streamlit deployment
   * Codenames Pictures ?
 
 

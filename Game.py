@@ -19,6 +19,7 @@ from persistent_state import (
     SPYMASTER_BEHAVIOR_KEY,
     SPYMASTER_INSTRUCT_KEY,
     SPYMASTER_PROMPT_KEY,
+    SPYMASTER_TEMP_KEY,
     persist_key,
     persist_session_state,
 )
@@ -146,6 +147,9 @@ else:
 
     if SPYMASTER_BEHAVIOR_KEY in st.session_state:
         spymaster.use_whole_history(st.session_state[SPYMASTER_BEHAVIOR_KEY])
+
+    if SPYMASTER_TEMP_KEY in st.session_state:
+        spymaster.update_temperature(st.session_state[SPYMASTER_TEMP_KEY])
 
     # Generate board
     columns = st.columns(side_length)

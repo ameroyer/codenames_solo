@@ -14,8 +14,10 @@ The forbidden word  REALLY NOT to guess is: {KLL}.
 Give me your best hint."""
 
 
-DEFAULT_SPYMASTER_INSTRUCT = """You are playing your favorite game, Codenames, as the spymaster giving hints.
+DEFAULT_SPYMASTER_INSTRUCT = """You are playing Codenames as a bold and creative spymaster giving hints.
 Your answers should be in the format WORD - NUMBER."""
+
+DEFAULT_SPYMASTER_TEMPERATURE = 0.9
 
 FULL_LANGUAGES = {
     "cz": "Czech",
@@ -101,6 +103,7 @@ class Spymaster:
         self.current_hint_word = None
         self.og_hint_num = 0
         self.current_hint_num = 0
+        self.temperature = DEFAULT_SPYMASTER_TEMPERATURE
         self.chat_history = [
             [
                 (
@@ -141,6 +144,9 @@ class Spymaster:
         """Update the base system instruct"""
         for lst in self.chat_history:
             lst[0][1]["content"] = instruct
+
+    def update_temperature(self, t: float) -> None:
+        self.temperature = t
 
     def use_whole_history(self, enabled: bool) -> None:
         """Whether to use the whole chat history or not"""
@@ -191,7 +197,7 @@ class Spymaster:
         self.current_hint_word = None
         self.current_team = 1 - self.current_team
 
-    def give_hint(self, num_retries: int = 2, debug: bool = True) -> None:
+    def give_hint(self, num_retries: int = 2, debug: bool = False) -> None:
         """Generates hint by prompting the language model
 
         :param num_retries: Number of retries in case the generated hint is
@@ -222,6 +228,7 @@ class Spymaster:
                     ]
                     if self.use_last_prompt_only
                     else [x[1] for x in self.chat_history[self.current_team]],
+                    temperature=self.temperature,
                 )
                 out = completion.choices[0].message.content.split("-")
 
@@ -229,7 +236,17 @@ class Spymaster:
                 hint_word, self.current_hint_num = out[0].strip().upper(), int(
                     out[-1].strip().replace(".", "")
                 )
-                if self.current_hint_num >= 1:
+                # Need to give at least one number and not give a word on the board
+                if (
+                    self.current_hint_num >= 1
+                    and not (
+                        hint_word in self.slf
+                        or hint_word in self.opp
+                        or hint_word in self.ntr
+                        or hint_word in self.kll
+                    )
+                    # if num retries hits 0, we still give a hint even though it might be invalid
+                ) or num_retries == 0:
                     self.current_hint_word = hint_word
                     self.og_hint_num = self.current_hint_num
                     self.chat_history[self.current_team].append(
@@ -244,8 +261,6 @@ class Spymaster:
             except ValueError:
                 pass
             num_retries -= 1
-        if num_retries == 0:
-            raise ValueError
 
     def play(self) -> Tuple[str, int]:
         """Display action in the hint box based on the current game's state"""
@@ -254,7 +269,7 @@ class Spymaster:
         # Check if we lost by guessing the killer card in the previous action
         if len(self.kll) == 0:
             return (
-                fmt.format("You found the killer. You lost ☠️"),
+                fmt.format("You found the assasin. You lost ☠️"),
                 -1,
             )
 
@@ -272,6 +287,7 @@ class Spymaster:
         # Otherwise, give a hint and continue
         if self.current_hint_word is None:
             self.give_hint()
+
         return (
             fmt.format(f"{self.current_hint_word} - {self.og_hint_num}")
             + "   \n"
